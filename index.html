@@ -1,0 +1,341 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Student App</title>
+
+  <style>
+    body {
+      font-family: Arial;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      margin: 0;
+    }
+
+    h2 {
+      text-align: center;
+      color: white;
+    }
+
+    .container {
+      width: 90%;
+      margin: 20px auto;
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+    }
+
+    input {
+      padding: 8px;
+      margin: 5px;
+    }
+
+    button {
+      padding: 8px 12px;
+      margin: 5px;
+      border: none;
+      color: white;
+      cursor: pointer;
+    }
+
+    
+
+    .add-btn { background: green; }
+    .update-btn { background: blue; }
+    .delete-btn { background: red; }
+
+    .topper-btn {
+  padding: 10px 18px;
+  margin: 8px;
+  border: none;
+  border-radius: 20px;
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+/* Individual colors */
+.maths { background: linear-gradient(45deg, #28a745, #5cd65c); }
+.physics { background: linear-gradient(45deg, #007bff, #66b3ff); }
+.chemistry { background: linear-gradient(45deg, #ff5733, #ff9966); }
+
+/* Hover effect */
+.topper-btn:hover {
+  transform: scale(1.1);
+  box-shadow: 0 0 10px rgba(0,0,0,0.3);
+}
+
+.close-btn {
+  margin-top: 15px;
+  padding: 8px 15px;
+  border: none;
+  border-radius: 15px;
+  background: linear-gradient(45deg, #ff0000, #ff4d4d);
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.close-btn:hover {
+  transform: scale(1.1);
+  box-shadow: 0 0 10px rgba(0,0,0,0.3);
+}
+
+.maths { background: #28a745; }
+.physics { background: #007bff; }
+.chemistry { background: #ff5733; }
+
+.topper-btn:hover {
+  transform: scale(1.1);
+}
+
+    table {
+      width: 100%;
+      margin-top: 20px;
+      border-collapse: collapse;
+    }
+
+    th {
+      background: #667eea;
+      color: white;
+      padding: 10px;
+    }
+
+    td {
+      padding: 8px;
+      text-align: center;
+    }
+
+    tr:nth-child(even) { background: #f2f2f2; }
+  </style>
+</head>
+
+<body>
+
+<h2>🎓 Student Management System</h2>
+
+<div class="container">
+
+  <input id="name" placeholder="Name">
+  <input id="age" placeholder="Age">
+  <input id="maths" placeholder="Maths">
+  <input id="physics" placeholder="Physics">
+  <input id="chemistry" placeholder="Chemistry">
+
+  <button id="mainBtn" class="add-btn">Add</button>
+
+  <h3>Student Details</h3>
+  <table>
+    <tr>
+      <th>ID</th>
+      <th>Name</th>
+      <th>Age</th>
+    </tr>
+    <tbody id="studentTable"></tbody>
+  </table>
+
+  <h3>Marks Details</h3>
+  <table>
+    <tr>
+      <th>ID</th>
+      <th>Maths</th>
+      <th>Physics</th>
+      <th>Chemistry</th>
+      <th>Action</th>
+    </tr>
+    <tbody id="marksTable"></tbody>
+
+    <h3>🏆 View Toppers</h3>
+
+<button class="topper-btn maths" onclick="getTopper('maths')">Maths Topper</button>
+<button class="topper-btn physics" onclick="getTopper('physics')">Physics Topper</button>
+<button class="topper-btn chemistry" onclick="getTopper('chemistry')">Chemistry Topper</button>
+<h4 id="topperResult"></h4>
+  </table>
+  
+
+</div>
+
+<div id="topperPopup" style="
+  display:none;
+  position:fixed;
+  top:30%;
+  left:50%;
+  transform:translate(-50%, -50%);
+  background:white;
+  padding:20px;
+  border-radius:10px;
+  box-shadow:0 0 15px rgba(0,0,0,0.3);
+  text-align:center;
+  z-index:1000;
+">
+  <h3 id="popupText"></h3>
+  <button class="close-btn" onclick="closePopup()">Close</button>
+</div>
+
+<button onclick="logout()" style="float:right;background:red;">Logout</button>
+
+<script>
+
+  if (!localStorage.getItem("loggedIn")) {
+  window.location.href = "login.html";
+}
+let editId = null;
+
+// PROTECT PAGE
+if (localStorage.getItem("loggedIn") !== "true") {
+  window.location.href = "login.html";
+}
+
+// LOAD
+function loadStudents() {
+  fetch("http://localhost:3000/students")
+    .then(res => res.json())
+    .then(data => {
+      const studentTable = document.getElementById("studentTable");
+      const marksTable = document.getElementById("marksTable");
+
+      studentTable.innerHTML = "";
+      marksTable.innerHTML = "";
+
+      data.forEach(s => {
+
+        const row1 = document.createElement("tr");
+        row1.innerHTML = `
+          <td>${s.id}</td>
+          <td>${s.name || ""}</td>
+          <td>${s.age || ""}</td>
+        `;
+        studentTable.appendChild(row1);
+
+        const row2 = document.createElement("tr");
+
+        const editBtn = document.createElement("button");
+        editBtn.innerText = "Edit";
+        editBtn.className = "update-btn";
+        editBtn.onclick = () => editStudent(s);
+
+        const deleteBtn = document.createElement("button");
+        deleteBtn.innerText = "Delete";
+        deleteBtn.className = "delete-btn";
+        deleteBtn.onclick = () => deleteStudent(s.id);
+
+        const actionTd = document.createElement("td");
+        actionTd.appendChild(editBtn);
+        actionTd.appendChild(deleteBtn);
+
+        row2.innerHTML = `
+          <td>${s.id}</td>
+          <td>${s.maths || 0}</td>
+          <td>${s.physics || 0}</td>
+          <td>${s.chemistry || 0}</td>
+        `;
+        row2.appendChild(actionTd);
+
+        marksTable.appendChild(row2);
+      });
+    });
+}
+
+// ADD / UPDATE
+document.getElementById("mainBtn").onclick = () => {
+  const name = document.getElementById("name").value.trim();
+  const age = document.getElementById("age").value.trim();
+  const maths = document.getElementById("maths").value.trim();
+  const physics = document.getElementById("physics").value.trim();
+  const chemistry = document.getElementById("chemistry").value.trim();
+
+  if (!name || !age) {
+    alert("Name and Age required!");
+    return;
+  }
+
+  const url = editId === null
+    ? `http://localhost:3000/add?name=${encodeURIComponent(name)}&age=${age}&maths=${maths}&physics=${physics}&chemistry=${chemistry}`
+    : `http://localhost:3000/update?id=${editId}&name=${encodeURIComponent(name)}&age=${age}&maths=${maths}&physics=${physics}&chemistry=${chemistry}`;
+
+  fetch(url).then(() => {
+    editId = null;
+    document.getElementById("mainBtn").innerText = "Add";
+    resetForm();
+  });
+};
+
+// EDIT
+function editStudent(s) {
+  document.getElementById("name").value = s.name || "";
+  document.getElementById("age").value = s.age || "";
+  document.getElementById("maths").value = s.maths || "";
+  document.getElementById("physics").value = s.physics || "";
+  document.getElementById("chemistry").value = s.chemistry || "";
+
+  editId = s.id;
+  document.getElementById("mainBtn").innerText = "Update";
+}
+
+// DELETE
+function deleteStudent(id) {
+  if (!confirm("Delete this student?")) return;
+
+  fetch(`http://localhost:3000/delete?id=${id}`)
+    .then(() => loadStudents());
+}
+
+// RESET
+function resetForm() {
+  document.getElementById("name").value = "";
+  document.getElementById("age").value = "";
+  document.getElementById("maths").value = "";
+  document.getElementById("physics").value = "";
+  document.getElementById("chemistry").value = "";
+  loadStudents();
+}
+
+function getTopper(subject) {
+  fetch(`http://localhost:3000/topper/${subject}`)
+    .then(res => res.json())
+    .then(data => {
+      if (!data.name) {
+        alert("No data");
+        return;
+      }
+
+      // 🔥 Highlight row
+      highlightTopper(data.name);
+
+      // 🏆 Show popup
+      document.getElementById("popupText").innerHTML =
+        `<span class="trophy">🏆</span><br>
+         ${subject.toUpperCase()} Topper<br>
+         <b>${data.name}</b> (${data[subject]} marks)`;
+
+      document.getElementById("topperPopup").style.display = "block";
+    })
+    .catch(() => alert("Error"));
+}
+
+function highlightTopper(name) {
+  const rows = document.querySelectorAll("#studentTable tr");
+
+  rows.forEach(row => {
+    row.classList.remove("topper-row");
+
+    if (row.innerText.includes(name)) {
+      row.classList.add("topper-row");
+    }
+  });
+}
+function closePopup() {
+  document.getElementById("topperPopup").style.display = "none";
+}
+// INIT
+loadStudents();
+function logout() {
+  localStorage.removeItem("loggedIn");  // clear login
+  window.location.href = "login.html";  // go to login page
+}
+</script>
+
+</body>
+</html>
